@@ -56,6 +56,3 @@ Compile and upload the design to the Altera Cyclone 4 E FPGA.
 Connect the 6-digit 7-segment display to the appropriate FPGA pins.
 Connect key1 and key2 to the FPGA's input pins.
 Run the FPGA and observe the output on the display.
-
-License:
-This project is licensed under the MIT License.
