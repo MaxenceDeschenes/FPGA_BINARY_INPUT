@@ -1,0 +1,49 @@
+module tb_top;
+
+  // Testbench signals
+  reg clk;                    // Clock input
+  reg key1;                    // Key 1 input (for counting)
+  reg key2;                    // Key 2 input (to disable counting)
+  wire [6:0] display_out;      // 7-segment display output
+  wire [5:0] AN;               // Anode control for 6-digit display
+
+  // Instantiate the top module
+  top uut (
+    .clk(clk),
+    .key1(key1),
+    .key2(key2),
+    .display_out(display_out),
+    .AN(AN)
+  );
+
+  // Clock generation
+  always begin
+    #5 clk = ~clk;  // Toggle clock every 5 time units (100 MHz)
+  end
+
+  // Stimulus generation
+  initial begin
+    // Initialize signals
+    clk = 0;
+    key1 = 1;  // Initially not pressed
+    key2 = 1;  // Initially not pressed
+
+    // Apply some stimulus
+    #10 key1 = 0;  // Press key1 to increment count
+    #10 key1 = 1;  // Release key1
+    #10 key1 = 0;  // Press key1 again
+    #10 key1 = 1;  // Release key1
+    #10 key2 = 0;  // Press key2 to disable counting
+    #10 key2 = 1;  // Release key2
+
+    // Add more stimulus as needed
+    #50 $stop; // Stop simulation after 50 time units
+  end
+
+  // Monitor output
+  initial begin
+    $monitor("At time %t, key1 = %b, key2 = %b, display_out = %b, AN = %b",
+             $time, key1, key2, display_out, AN);
+  end
+
+endmodule

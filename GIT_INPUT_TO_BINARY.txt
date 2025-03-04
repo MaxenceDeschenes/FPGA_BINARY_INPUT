@@ -1,0 +1,104 @@
+module top(
+    input wire clk,                // Clock input
+    input wire key1,               // Key 1 input for counting
+    input wire key2,               // Key 2 input to disable counting
+    output reg [6:0] display_out,  // Output to 7-segment display
+    output reg [5:0] AN            // Anode control for 6-digit display
+);
+
+// 7-segment encoding for digits (active-high)
+parameter ZERO = 7'b0000001;  // Encoding for '0'
+parameter ONE  = 7'b1001111;  // Encoding for '1'
+
+// Internal registers
+reg [2:0] display_select = 0;    // Controls which display digit to activate
+reg [19:0] refresh_counter = 0;  // Counter to manage refresh rate
+reg [5:0] count = 0;             // 6-bit counter value
+reg counting_enabled = 1;        // Flag to enable/disable counting
+reg key1_prev = 1;               // Previous state of key1 (for debouncing)
+reg key2_prev = 1;               // Previous state of key2 (for debouncing)
+
+// Array to store data for each 7-segment display
+reg [6:0] display_data [5:0];    
+
+// Initialize all displays to show 0
+initial begin
+    display_data[0] = ZERO;
+    display_data[1] = ZERO;
+    display_data[2] = ZERO;
+    display_data[3] = ZERO;
+    display_data[4] = ZERO;
+    display_data[5] = ZERO;
+end
+
+// Key press handling and counter logic
+always @(posedge clk) begin
+    // Increment counter when key1 is pressed (debounced)
+    if (counting_enabled && key1_prev && !key1) begin
+        if (count < 6'b111111) begin  // Limit counter to 63
+            count <= count + 1;
+        end
+    end
+    key1_prev <= key1;  // Update key1 state
+
+    // Disable counting when key2 is pressed
+    if (key2_prev && !key2) begin  
+        counting_enabled <= 0; // Disable counting
+        
+        // Update display data with binary representation of count
+        display_data[0] = count[5] ? ONE : ZERO; 
+        display_data[1] = count[4] ? ONE : ZERO;
+        display_data[2] = count[3] ? ONE : ZERO;
+        display_data[3] = count[2] ? ONE : ZERO;
+        display_data[4] = count[1] ? ONE : ZERO;
+        display_data[5] = count[0] ? ONE : ZERO;  
+    end
+    key2_prev <= key2;  // Update key2 state
+end
+
+// Multiplexing logic to refresh display every 50000 cycles
+always @(posedge clk) begin
+    refresh_counter <= refresh_counter + 1;  // Increment refresh counter
+    
+    if (refresh_counter >= 20'd50000) begin  // Refresh rate control
+        refresh_counter <= 0;  // Reset refresh counter
+        if (display_select >= 5)
+            display_select <= 0;  // Reset display select if greater than 5
+        else
+            display_select <= display_select + 1;  // Move to the next display
+    end
+
+    // Update the display based on the selected display
+    case (display_select)
+        3'd0: begin
+            AN <= 6'b111110;  // Activate first display
+            display_out <= display_data[0];
+        end
+        3'd1: begin
+            AN <= 6'b111101;  // Activate second display
+            display_out <= display_data[1];
+        end
+        3'd2: begin
+            AN <= 6'b111011;  // Activate third display
+            display_out <= display_data[2];
+        end
+        3'd3: begin
+            AN <= 6'b110111;  // Activate fourth display
+            display_out <= display_data[3];
+        end
+        3'd4: begin
+            AN <= 6'b101111;  // Activate fifth display
+            display_out <= display_data[4];
+        end
+        3'd5: begin
+            AN <= 6'b011111;  // Activate sixth (leftmost) display
+            display_out <= display_data[5];
+        end
+        default: begin
+            AN <= 6'b111111;  // Turn off all displays
+            display_out <= 7'b1111111;  // Blank display
+        end
+    endcase
+end
+
+endmodule
